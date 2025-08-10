@@ -10,18 +10,13 @@ import requests
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__, static_folder='.', template_folder='.')
 CORS(app)  # Enable CORS for all routes
 
 # Configuration
-# Get the Gemini API key from environment variables
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = ""
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
 
 # Company information
@@ -211,7 +206,7 @@ def submit_service_request():
     """Handle service request submission"""
     try:
         data = request.get_json()
-
+        
         # Validate required fields
         required_fields = ['fullName', 'email', 'phone', 'serviceId', 'projectDescription']
         for field in required_fields:
@@ -220,7 +215,7 @@ def submit_service_request():
                     "success": False,
                     "error": f"Missing required field: {field}"
                 }), 400
-
+        
         # Find the selected service
         service = next((s for s in SERVICES if s['id'] == data['serviceId']), None)
         if not service:
@@ -228,11 +223,11 @@ def submit_service_request():
                 "success": False,
                 "error": "Invalid service ID"
             }), 400
-
+        
         # Calculate final price
         custom_amount = data.get('customAmount')
         final_price = float(custom_amount) if custom_amount else service['price']
-
+        
         # Create service request
         service_request = {
             "id": len(service_requests) + 1,
@@ -257,17 +252,17 @@ def submit_service_request():
             },
             "status": "pending"
         }
-
+        
         # Store the request
         service_requests.append(service_request)
-
+        
         return jsonify({
             "success": True,
             "message": "Service request submitted successfully",
             "request_id": service_request['id'],
             "final_price": final_price
         })
-
+        
     except Exception as e:
         return jsonify({
             "success": False,
@@ -281,22 +276,20 @@ def chat_with_ai():
         data = request.get_json()
         message = data.get('message', '').strip()
         language = data.get('language', 'en')
-
-        # Use the API key from the environment, with a fallback to the one in the request (though not recommended)
-        api_key = GEMINI_API_KEY or data.get('api_key')
-
+        api_key = data.get('api_key', GEMINI_API_KEY)
+        
         if not message:
             return jsonify({
                 "success": False,
                 "error": "Message is required"
             }), 400
-
+        
         if not api_key:
             return jsonify({
                 "success": False,
                 "error": "API key is required"
             }), 400
-
+        
         # Create system prompt based on language
         if language == 'ar':
             system_prompt = f"""أنت مساعد ذكي لشركة "{COMPANY_INFO['name_ar']}" الموجودة في {COMPANY_INFO['location']}. 
@@ -366,12 +359,12 @@ Contact information:
 - TikTok: {COMPANY_INFO['tiktok']}
 
 Respond helpfully and professionally in English."""
-
+        
         # Call Gemini API
         headers = {
             'Content-Type': 'application/json',
         }
-
+        
         payload = {
             "contents": [{
                 "parts": [{
@@ -379,30 +372,30 @@ Respond helpfully and professionally in English."""
                 }]
             }]
         }
-
+        
         response = requests.post(
             f"{GEMINI_API_URL}?key={api_key}",
             headers=headers,
             json=payload,
             timeout=30
         )
-
+        
         if response.status_code != 200:
             return jsonify({
                 "success": False,
                 "error": "Failed to get response from AI service"
             }), 500
-
+        
         response_data = response.json()
-
+        
         if 'candidates' not in response_data or not response_data['candidates']:
             return jsonify({
                 "success": False,
                 "error": "No response from AI service"
             }), 500
-
+        
         ai_response = response_data['candidates'][0]['content']['parts'][0]['text']
-
+        
         # Store chat history
         chat_entry = {
             "timestamp": datetime.now().isoformat(),
@@ -411,12 +404,12 @@ Respond helpfully and professionally in English."""
             "language": language
         }
         chat_history.append(chat_entry)
-
+        
         return jsonify({
             "success": True,
             "response": ai_response
         })
-
+        
     except requests.exceptions.Timeout:
         return jsonify({
             "success": False,
@@ -439,21 +432,21 @@ def process_coffee_payment():
     try:
         data = request.get_json()
         amount = data.get('amount', 0)
-
+        
         if amount <= 0:
             return jsonify({
                 "success": False,
                 "error": "Invalid amount"
             }), 400
-
+        
         payment_url = f"{COMPANY_INFO['coffee_payment']}?amount={amount}"
-
+        
         return jsonify({
             "success": True,
             "payment_url": payment_url,
             "message": "Redirecting to Coffee payment..."
         })
-
+        
     except Exception as e:
         return jsonify({
             "success": False,
@@ -502,15 +495,16 @@ def internal_error(error):
 if __name__ == '__main__':
     # Get port from environment variable or default to 5000
     port = int(os.environ.get('PORT', 5000))
-
+    
     # Run the Flask app
     print(f"Starting Flask server on port {port}...")
     print(f"Website will be available at: http://localhost:{port}")
     print(f"API endpoints available at: http://localhost:{port}/api/")
-
+    
     app.run(
         host='0.0.0.0',  # Allow external connections
         port=port,
         debug=True,  # Enable debug mode for development
         threaded=True  # Enable threading for better performance
     )
+
