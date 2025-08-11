@@ -14,7 +14,7 @@ app = Flask(__name__, static_folder='.', template_folder='.')
 CORS(app)  # Enable CORS for all routes
 
 # Configuration
-GEMINI_API_KEY = "AIzaSyAqjgFK0yUHUu8yo2qtxmPFjTyf2PLDJRk"  # تأكد أن تضع API KEY الصحيح هنا أو من الواجهة الأمامية
+GEMINI_API_KEY = ""  # تأكد أن تضع API KEY الصحيح هنا أو من الواجهة الأمامية
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
 
 # Company information
